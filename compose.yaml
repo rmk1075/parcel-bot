@@ -1,0 +1,13 @@
+# 같은 이미지로 WSGI/ASGI 두 서버를 나란히 띄워 스트리밍 동작을 대비한다.
+services:
+  wsgi:
+    build: .
+    container_name: parcel-bot-wsgi
+    command: uv run python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+  asgi:
+    build: .
+    container_name: parcel-bot-asgi
+    ports:
+      - "8001:8000"
