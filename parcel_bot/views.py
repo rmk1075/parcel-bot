@@ -41,7 +41,7 @@ async def chat(request: HttpRequest) -> StreamingHttpResponse:
 
 
 def graph_sync(request: HttpRequest) -> StreamingHttpResponse:
-    # 동기 view + graph.stream() (동기 generator) — WSGI 와 매칭, ASGI 에서는 통째 버퍼링
+    # sync view + graph.stream() (sync generator). WSGI 와 매칭, ASGI 에서는 통째 버퍼링
     message = _message(request)
 
     def stream():
@@ -53,7 +53,7 @@ def graph_sync(request: HttpRequest) -> StreamingHttpResponse:
 
 
 async def graph_async(request: HttpRequest) -> StreamingHttpResponse:
-    # async view + graph.astream() (async generator) — ASGI 와 매칭, WSGI 에서는 통째 버퍼링
+    # async view + graph.astream() (async generator). ASGI 와 매칭, WSGI 에서는 통째 버퍼링
     message = _message(request)
 
     async def stream():
@@ -65,7 +65,7 @@ async def graph_async(request: HttpRequest) -> StreamingHttpResponse:
 
 
 async def graph_bridge(request: HttpRequest) -> StreamingHttpResponse:
-    # 동기 graph.stream() 을 async generator 로 감싸 한 개씩 꺼내는 브리지 — ASGI 에서도 실스트리밍
+    # sync graph.stream() 을 async generator 로 감싸 한 개씩 꺼내는 브리지. ASGI 에서도 실스트리밍
     message = _message(request)
 
     async def stream():

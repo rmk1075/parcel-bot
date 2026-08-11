@@ -10,9 +10,9 @@
 | Endpoint | 스트림 종류 | WSGI (:8000) | ASGI (:8001) |
 |---|---|---|---|
 | `POST /chat/` | async generator (mock LLM) | 통째 버퍼링 | 실시간 스트리밍 |
-| `POST /graph/sync/` | `graph.stream()` 동기 generator | 실시간 스트리밍 | 통째 버퍼링 |
+| `POST /graph/sync/` | `graph.stream()` sync generator | 실시간 스트리밍 | 통째 버퍼링 |
 | `POST /graph/async/` | `graph.astream()` async generator | 통째 버퍼링 | 실시간 스트리밍 |
-| `POST /graph/bridge/` | 동기 stream 을 per-item `sync_to_async(next)` 로 감싼 async generator | — | 실시간 스트리밍 |
+| `POST /graph/bridge/` | sync stream 을 per-item `sync_to_async(next)` 로 감싼 async generator | — | 실시간 스트리밍 |
 
 iterator 종류와 서버 종류가 어긋나면 Django 가 스트림을 통째로 소비한 뒤 한 번에 내보낸다.
 

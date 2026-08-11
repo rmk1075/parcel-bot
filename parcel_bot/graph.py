@@ -10,7 +10,7 @@ class ChatState(TypedDict):
 
 
 def reply(state: ChatState) -> ChatState:
-    # 동기 node — 실제 서비스에서 ORM/동기 LLM 호출이 섞이는 상황을 재현한다.
+    # sync node: 실제 서비스에서 ORM/sync LLM 호출이 섞이는 상황을 재현한다.
     writer = get_stream_writer()
     text = (
         f"'{state['message']}' 문의 확인했습니다. 배송 접수를 도와드릴게요. "
