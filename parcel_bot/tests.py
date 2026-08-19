@@ -16,6 +16,24 @@ class ChatStreamTests(SimpleTestCase):
         _assert_sse_body(self, res, body)
 
 
+class ChatPageTests(SimpleTestCase):
+    def test_index_serves_chat_page(self):
+        res = self.client.get("/")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b"parcel-bot", res.content)
+
+
+class UpstreamErrorTests(SimpleTestCase):
+    async def test_upstream_error_emits_error_event(self):
+        res = await self.async_client.post(
+            "/chat/", {"message": "오류 재현"}, content_type="application/json"
+        )
+        body = b"".join([chunk async for chunk in res.streaming_content]).decode()
+        self.assertIn("event: error", body)
+        self.assertIn("upstream LLM", body)
+        self.assertNotIn("[DONE]", body)
+
+
 class GraphStreamTests(SimpleTestCase):
     def test_graph_sync_streams_sse_tokens(self):
         res = self.client.post(
