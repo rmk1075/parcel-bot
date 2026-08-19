@@ -4,6 +4,16 @@
 
 - **v0.1** — SSE 스트리밍 chat endpoint + mock LLM. WSGI(runserver)와 ASGI(uvicorn)의 스트리밍 동작 차이 재현.
 - **v0.2** — LangGraph 연동. iterator 종류(sync/async) × 서버(WSGI/ASGI) 조합별 버퍼링 매트릭스 재현.
+- **v0.3** — 스트리밍 중단 케이스 재현. 채팅 페이지(`/`)와 클라이언트 watchdog, 서버 disconnect 감지, 업스트림 에러 주입.
+
+## 스트리밍 중단 케이스 (v0.3)
+
+| 케이스 | 재현 방법 | 클라이언트가 받는 신호 |
+|---|---|---|
+| 클라이언트 이탈 | 페이지 닫기 또는 curl 강제 종료 | (서버가 감지: `client disconnected` 로그, 스트림 취소) |
+| 서버 종료 | 스트리밍 중 `docker stop parcel-bot-asgi` | 연결 닫힘 (curl exit 18), `[DONE]` 없음 |
+| 조용한 절단 | 스트리밍 중 `docker pause parcel-bot-asgi` | 없음. 클라이언트 타임아웃(watchdog)만이 감지 수단 |
+| 업스트림 중단 | 메시지에 "오류" 포함해 전송 | `event: error` SSE 이벤트 |
 
 ## Endpoints
 
