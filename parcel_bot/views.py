@@ -95,7 +95,7 @@ async def chat(request: HttpRequest) -> StreamingHttpResponse:
                     yield "data: [DONE]\n\n"
                     return
         except (asyncio.CancelledError, GeneratorExit):
-            # 케이스 1 (클라이언트 이탈): 전송만 멈춘다. 생성 task 는 끝까지 돌아 완주 로그를 남긴다.
+            # 케이스 1 (클라이언트 측 단절): 전송만 멈춘다. 생성 task 는 끝까지 돌아 완주 로그를 남긴다.
             print(
                 f"client disconnected, streaming stopped (generation continues): message={message!r}",
                 flush=True,

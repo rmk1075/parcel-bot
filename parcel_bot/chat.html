@@ -22,7 +22,7 @@
 <div id="status"></div>
 
 <script>
-// 조용한 절단 감지용 클라이언트 watchdog: 이 시간 동안 수신이 없으면 끊긴 것으로 판정한다.
+// 조용한 단절 감지용 클라이언트 watchdog: 이 시간 동안 수신이 없으면 끊긴 것으로 판정한다.
 const WATCHDOG_MS = 3000;
 
 const log = document.getElementById("log");
@@ -43,7 +43,7 @@ document.getElementById("form").addEventListener("submit", async (e) => {
   const resetWatchdog = () => {
     clearTimeout(watchdog);
     watchdog = setTimeout(() => {
-      // 케이스 3 (조용한 절단): 소켓은 열려 있지만 데이터가 멈춘 상태.
+      // 케이스 3 (조용한 단절): 소켓은 열려 있지만 데이터가 멈춘 상태.
       // 서버·네트워크는 아무 신호도 주지 않으므로 클라이언트 타임아웃만이 감지 수단이다.
       setStatus(`응답이 ${WATCHDOG_MS / 1000}초간 멈췄습니다. 연결이 끊긴 것으로 보입니다.`, true);
       controller.abort();
@@ -93,7 +93,7 @@ document.getElementById("form").addEventListener("submit", async (e) => {
     }
 
     if (!done) {
-      // 케이스 2 (서버 종료): [DONE] 없이 소켓이 닫혔다. 신호가 있는 절단이다.
+      // 케이스 2 (서버 종료): [DONE] 없이 소켓이 닫혔다. 신호가 있는 단절이다.
       setStatus("응답이 완료되기 전에 연결이 닫혔습니다.", true);
     }
   } catch (err) {
