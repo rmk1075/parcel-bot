@@ -1,4 +1,8 @@
+from unittest import mock
+
 from django.test import SimpleTestCase
+
+from parcel_bot import views
 
 
 def _assert_sse_body(testcase: SimpleTestCase, res, body: str) -> None:
@@ -32,6 +36,20 @@ class UpstreamErrorTests(SimpleTestCase):
         self.assertIn("event: error", body)
         self.assertIn("upstream LLM", body)
         self.assertNotIn("[DONE]", body)
+
+
+class KeepaliveTests(SimpleTestCase):
+    async def test_slow_first_token_emits_keepalive(self):
+        with (
+            mock.patch.object(views, "SLOW_FIRST_TOKEN_S", 0.5),
+            mock.patch.object(views, "KEEPALIVE_INTERVAL_S", 0.1),
+        ):
+            res = await self.async_client.post(
+                "/chat/", {"message": "느림 재현"}, content_type="application/json"
+            )
+            body = b"".join([chunk async for chunk in res.streaming_content]).decode()
+        self.assertIn(": keepalive", body)
+        self.assertIn("[DONE]", body)
 
 
 class GraphStreamTests(SimpleTestCase):

@@ -23,9 +23,18 @@ def index(request: HttpRequest) -> HttpResponse:
     return HttpResponse(html, content_type="text/html; charset=utf-8")
 
 
+# 무토큰 구간이 이 간격을 넘으면 연결이 살아 있다는 신호(SSE comment)를 보낸다.
+KEEPALIVE_INTERVAL_S = 1.0
+# "느림" 트리거 시 첫 토큰 전 침묵 시간. LLM 의 thinking·tool 호출 구간을 재현한다.
+SLOW_FIRST_TOKEN_S = 10.0
+
+
 async def _mock_llm(message: str):
     # 고정 답변을 토큰 단위로 흘리는 가짜 LLM. 균일한 300ms 간격이 스트리밍 관측의 기준선이 된다.
     # 메시지에 "오류" 가 들어 있으면 네 번째 토큰에서 실패해 upstream 중단을 재현한다.
+    # 메시지에 "느림" 이 들어 있으면 첫 토큰 전에 침묵해 늦은 첫 토큰(TTFT)을 재현한다.
+    if "느림" in message:
+        await asyncio.sleep(SLOW_FIRST_TOKEN_S)
     reply = (
         f"'{message}' 문의 확인했습니다. 배송 접수를 도와드릴게요. "
         "보내시는 분 성함과 받으시는 분 주소를 알려주세요."
@@ -66,7 +75,15 @@ async def chat(request: HttpRequest) -> StreamingHttpResponse:
     async def stream():
         try:
             while True:
-                kind, value = await queue.get()
+                try:
+                    kind, value = await asyncio.wait_for(
+                        queue.get(), timeout=KEEPALIVE_INTERVAL_S
+                    )
+                except TimeoutError:
+                    # 무토큰 구간: 클라이언트 watchdog 과 중간 프록시의 idle 판정을 리셋한다.
+                    # SSE comment(콜론 시작 줄)는 데이터가 아니라서 클라이언트 파서에 무시된다.
+                    yield ": keepalive\n\n"
+                    continue
                 if kind == "token":
                     yield _sse(value)
                 elif kind == "error":

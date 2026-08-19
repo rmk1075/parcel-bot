@@ -14,6 +14,7 @@
 | 서버 종료 | 스트리밍 중 `docker stop parcel-bot-asgi` | 연결 닫힘 (curl exit 18), `[DONE]` 없음 |
 | 조용한 절단 | 스트리밍 중 `docker pause parcel-bot-asgi` | 없음. 클라이언트 타임아웃(watchdog)만이 감지 수단 |
 | 업스트림 중단 | 메시지에 "오류" 포함해 전송 | `event: error` SSE 이벤트 |
+| 늦은 첫 토큰 (timeout 오탐 유발) | 메시지에 "느림" 포함해 전송 | 무토큰 구간 동안 1초 간격 `: keepalive` (watchdog·프록시 idle 판정 리셋) |
 
 ## Endpoints
 
