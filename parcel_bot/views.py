@@ -37,21 +37,52 @@ async def _mock_llm(message: str):
         yield token + " "
 
 
+# 완주 정책: 생성 task 가 끝날 때까지 GC 되지 않도록 강한 참조를 유지한다.
+_generation_tasks: set = set()
+
+
+async def _generate(message: str, queue: asyncio.Queue) -> None:
+    # 생성은 연결과 분리된 task 로 돈다. 연결이 끊겨도 여기는 끝까지 실행된다.
+    text = ""
+    try:
+        async for token in _mock_llm(message):
+            text += token
+            await queue.put(("token", token))
+        await queue.put(("done", None))
+        # 실서비스라면 이 시점에 완성본을 대화 이력에 저장한다.
+        print(f"generation finished: message={message!r} reply={text!r}", flush=True)
+    except RuntimeError as e:
+        await queue.put(("error", str(e)))
+        print(f"generation failed: message={message!r} error={e}", flush=True)
+
+
 async def chat(request: HttpRequest) -> StreamingHttpResponse:
     message = _message(request)
+    queue: asyncio.Queue = asyncio.Queue()
+    task = asyncio.create_task(_generate(message, queue))
+    _generation_tasks.add(task)
+    task.add_done_callback(_generation_tasks.discard)
 
     async def stream():
         try:
-            async for token in _mock_llm(message):
-                yield _sse(token)
-            yield "data: [DONE]\n\n"
-        except RuntimeError as e:
-            # 케이스 4 (업스트림 중단): 클라이언트 연결은 살아 있으므로 에러를 SSE 이벤트로 알린다.
-            payload = json.dumps({"message": str(e)}, ensure_ascii=False)
-            yield f"event: error\ndata: {payload}\n\n"
+            while True:
+                kind, value = await queue.get()
+                if kind == "token":
+                    yield _sse(value)
+                elif kind == "error":
+                    # 케이스 4 (업스트림 중단): 연결은 살아 있으므로 에러를 SSE 이벤트로 알린다.
+                    payload = json.dumps({"message": value}, ensure_ascii=False)
+                    yield f"event: error\ndata: {payload}\n\n"
+                    return
+                else:
+                    yield "data: [DONE]\n\n"
+                    return
         except (asyncio.CancelledError, GeneratorExit):
-            # 케이스 1 (클라이언트 이탈): 실서비스라면 여기서 LLM 스트림을 취소해 비용을 아낀다.
-            print(f"client disconnected, cancelling stream: message={message!r}", flush=True)
+            # 케이스 1 (클라이언트 이탈): 전송만 멈춘다. 생성 task 는 끝까지 돌아 완주 로그를 남긴다.
+            print(
+                f"client disconnected, streaming stopped (generation continues): message={message!r}",
+                flush=True,
+            )
             raise
 
     return StreamingHttpResponse(stream(), content_type="text/event-stream")
